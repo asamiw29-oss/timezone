@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>タイムゾーン時間計算 / クルーレスト分割</title>
+<style>
+  :root {
+    --bg: #0f172a; --panel: #1e293b; --panel-2: #273449; --line: #334155;
+    --text: #e2e8f0; --muted: #94a3b8; --accent: #38bdf8; --accent-strong: #0ea5e9;
+    --good: #34d399; --bad: #f87171; --warn: #fbbf24; --violet: #a78bfa; --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: linear-gradient(160deg, #0b1120, #0f172a 40%, #111827);
+    color: var(--text);
+    font-family: -apple-system, "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, system-ui, sans-serif;
+    line-height: 1.6; min-height: 100vh; padding: 20px 16px 64px;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+
+  header.app { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  header.app .back {
+    background: var(--panel); border: 1px solid var(--line); color: var(--text);
+    border-radius: 10px; padding: 8px 12px; font-size: .9rem; cursor: pointer;
+  }
+  header.app .back:hover { border-color: var(--accent); }
+  header.app .back[hidden] { display: none; }
+  header.app h1 { font-size: 1.15rem; margin: 0; letter-spacing: .02em; }
+  header.app .sub { color: var(--muted); font-size: .78rem; }
+
+  .screen[hidden] { display: none; }
+
+  /* entry */
+  .entry-hero { text-align: center; margin: 8px 0 24px; }
+  .entry-hero h2 { margin: 0 0 6px; font-size: 1.4rem; }
+  .entry-hero p { margin: 0; color: var(--muted); font-size: .9rem; }
+  .mode-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 560px) { .mode-cards { grid-template-columns: 1fr; } }
+  .mode-card {
+    text-align: left; background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 20px 18px; cursor: pointer; color: var(--text);
+    transition: transform .12s, border-color .12s, box-shadow .12s;
+  }
+  .mode-card:hover { transform: translateY(-3px); border-color: var(--accent); box-shadow: 0 12px 30px rgba(0,0,0,.35); }
+  .mode-card .ico { font-size: 1.8rem; }
+  .mode-card h3 { margin: 8px 0 4px; font-size: 1.1rem; }
+  .mode-card.b h3 { color: var(--violet); }
+  .mode-card.a h3 { color: var(--accent); }
+  .mode-card p { margin: 0; color: var(--muted); font-size: .85rem; }
+  .shared-note { margin-top: 16px; text-align: center; color: var(--muted); font-size: .78rem; }
+
+  .block {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 18px 18px 16px; margin-bottom: 16px; box-shadow: 0 8px 30px rgba(0,0,0,.25);
+  }
+  .block h2 {
+    font-size: .8rem; text-transform: uppercase; letter-spacing: .12em;
+    color: var(--accent); margin: 0 0 12px; font-weight: 700; display: flex; align-items: center; gap: 8px;
+  }
+  .block.violet h2 { color: var(--violet); }
+  .badge { display:inline-block; width: 22px; height: 22px; border-radius: 50%;
+    background: var(--accent-strong); color:#04121e; text-align:center; line-height:22px; font-size:.75rem; font-weight:800; }
+  .block.violet .badge { background: var(--violet); }
+
+  label { display: block; font-size: .8rem; color: var(--muted); margin: 0 0 4px; }
+  .field { margin-bottom: 12px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  @media (max-width: 520px) { .row3 { grid-template-columns: 1fr 1fr; } }
+
+  input[type="text"], input[type="datetime-local"], input[type="time"], input[type="number"], select {
+    width: 100%; padding: 11px 12px; font-size: 1rem; background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--line); border-radius: 10px; outline: none; -webkit-appearance: none; appearance: none;
+  }
+  input[type="datetime-local"], input[type="time"] { color-scheme: dark; }
+  input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(56,189,248,.18); }
+
+  .combo { position: relative; }
+  .combo ul {
+    list-style: none; margin: 4px 0 0; padding: 4px; position: absolute; z-index: 30; left: 0; right: 0; top: 100%;
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
+    max-height: 260px; overflow-y: auto; box-shadow: 0 12px 30px rgba(0,0,0,.4);
+  }
+  .combo ul[hidden] { display: none; }
+  .combo li { padding: 8px 10px; border-radius: 7px; cursor: pointer; font-size: .95rem;
+    display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+  .combo li .region { color: var(--muted); font-size: .78rem; white-space: nowrap; }
+  .combo li[aria-selected="true"], .combo li:hover { background: var(--accent-strong); color: #04121e; }
+  .combo li[aria-selected="true"] .region, .combo li:hover .region { color: #063049; }
+  .combo .empty { color: var(--muted); cursor: default; }
+  .combo .empty:hover { background: transparent; color: var(--muted); }
+
+  .clock { margin-top: 6px; font-size: .85rem; color: var(--muted); background: var(--panel-2);
+    border: 1px dashed var(--line); border-radius: 10px; padding: 8px 10px; min-height: 20px; }
+  .clock b { color: var(--text); font-weight: 600; }
+  .clock .off { color: var(--accent); font-weight: 700; }
+
+  #resultBlock { background: linear-gradient(160deg, #172033, #1e293b); }
+  .duration { text-align: center; padding: 6px 0 2px; }
+  .duration .big { font-size: 2.7rem; font-weight: 800; color: var(--good); line-height: 1.1; }
+  .duration .big .unit { font-size: 1.3rem; font-weight: 700; color: var(--text); margin: 0 2px 0 4px; }
+  .duration .sub { color: var(--muted); font-size: .9rem; margin-top: 4px; }
+  .msg { margin-top: 12px; font-size: .9rem; padding: 10px 12px; border-radius: 10px; }
+  .msg.info { background: rgba(56,189,248,.12); border:1px solid rgba(56,189,248,.3); }
+  .msg.error { background: rgba(248,113,113,.12); border:1px solid rgba(248,113,113,.4); color: #fecaca; }
+  .msg.warn { background: rgba(251,191,36,.12); border:1px solid rgba(251,191,36,.4); color: #fde68a; }
+
+  .diffrow { display:flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); font-size: .92rem; }
+  .diffrow:first-of-type { border-top: none; }
+  .diffrow .city { color: var(--text); font-weight: 600; }
+  .diffrow .val { color: var(--accent); font-weight: 700; white-space: nowrap; }
+  .diffrow .now { color: var(--muted); font-size: .82rem; }
+
+  .home-tz { font-size: .82rem; color: var(--muted); margin-bottom: 10px; }
+  .home-tz b { color: var(--text); }
+  .fallback[hidden] { display: none; }
+
+  /* Mode B result table */
+  .rest-summary { text-align: center; margin-bottom: 12px; }
+  .rest-summary .big { font-size: 2rem; font-weight: 800; color: var(--violet); }
+  .rest-summary .big .unit { font-size: 1.1rem; color: var(--text); margin-left: 4px; }
+  .rest-summary .sub { color: var(--muted); font-size: .85rem; }
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table.rest { width: 100%; border-collapse: collapse; font-size: .9rem; min-width: 420px; }
+  table.rest th, table.rest td { padding: 9px 10px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  table.rest thead th { color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
+  table.rest tbody td.g { font-weight: 700; color: var(--violet); }
+  table.rest tbody td.len { color: var(--good); font-weight: 600; }
+  table.rest .zid { display:block; font-size: .68rem; color: var(--muted); font-weight: 400; letter-spacing: 0; text-transform: none; }
+  table.rest td .plus { color: var(--warn); font-size: .78rem; }
+
+  footer { text-align: center; color: var(--muted); font-size: .75rem; margin-top: 24px; }
+  code { background: var(--panel-2); padding: 1px 5px; border-radius: 5px; }
+  .hint { font-size: .75rem; color: var(--muted); margin-top: 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="app">
+    <button class="back" id="backBtn" hidden>← 入り口</button>
+    <div>
+      <h1 id="appTitle">タイムゾーン時間計算</h1>
+      <div class="sub" id="appSub">用途に応じて2つのモードを選べます</div>
+    </div>
+  </header>
+
+  <!-- ========== 入り口 ========== -->
+  <section class="screen" id="screenEntry">
+    <div class="entry-hero">
+      <h2>どちらを使いますか？</h2>
+      <p>都市の選択は両モードで共有されます</p>
+    </div>
+    <div class="mode-cards">
+      <button class="mode-card a" id="goA">
+        <div class="ico">🕐</div>
+        <h3>時間計算</h3>
+        <p>出発地・到着地の時刻から、時差・夏時間・日跨ぎを吸収した正しい所要時間を計算。現在地との時差も確認。</p>
+      </button>
+      <button class="mode-card b" id="goB">
+        <div class="ico">🛏️</div>
+        <h3>クルーレスト分割</h3>
+        <p>長距離便のレスト時間帯を交替数で均等割り。各グループの休憩帯を出発地／到着地／UTCで表示。</p>
+      </button>
+    </div>
+    <div class="shared-note" id="sharedNote">出発地・到着地はまだ選択されていません</div>
+  </section>
+
+  <!-- ========== モードA｜時間計算 ========== -->
+  <section class="screen" id="screenA" hidden>
+    <section class="block" aria-labelledby="depHead">
+      <h2 id="depHead"><span class="badge">1</span> 出発地</h2>
+      <div class="field combo" id="depCombo">
+        <label for="depInput">都市を検索・選択</label>
+        <input type="text" id="depInput" role="combobox" aria-expanded="false" aria-autocomplete="list"
+               aria-controls="depList" autocomplete="off" placeholder="例: Tokyo / 東京 / New York" />
+        <ul id="depList" role="listbox" hidden></ul>
+      </div>
+      <div class="field">
+        <label for="depTime">出発日時（現地時刻）</label>
+        <input type="datetime-local" id="depTime" />
+      </div>
+      <div class="clock" id="depClock">都市を選ぶと現在時刻を表示します</div>
+    </section>
+
+    <section class="block" aria-labelledby="arrHead">
+      <h2 id="arrHead"><span class="badge">2</span> 到着地</h2>
+      <div class="field combo" id="arrCombo">
+        <label for="arrInput">都市を検索・選択</label>
+        <input type="text" id="arrInput" role="combobox" aria-expanded="false" aria-autocomplete="list"
+               aria-controls="arrList" autocomplete="off" placeholder="例: New York / ニューヨーク / London" />
+        <ul id="arrList" role="listbox" hidden></ul>
+      </div>
+      <div class="field">
+        <label for="arrTime">到着日時（現地時刻）</label>
+        <input type="datetime-local" id="arrTime" />
+      </div>
+      <div class="clock" id="arrClock">都市を選ぶと現在時刻を表示します</div>
+    </section>
+
+    <section class="block" id="resultBlock" aria-labelledby="resHead" aria-live="polite">
+      <h2 id="resHead"><span class="badge">3</span> 所要時間</h2>
+      <div class="duration" id="durationView">
+        <div class="sub">出発地・到着地と日時をすべて入力すると自動計算します</div>
+      </div>
+      <div id="resultMsg"></div>
+    </section>
+
+    <section class="block" aria-labelledby="homeHead">
+      <h2 id="homeHead"><span class="badge">4</span> 現在地との時差</h2>
+      <div class="home-tz" id="homeTzLine">現在地タイムゾーンを取得中…</div>
+      <div class="fallback field" id="homeFallback" hidden>
+        <label for="homeSelect">現在地タイムゾーンを手動で選択</label>
+        <select id="homeSelect"></select>
+      </div>
+      <div id="homeDiffs"></div>
+    </section>
+  </section>
+
+  <!-- ========== モードB｜クルーレスト分割 ========== -->
+  <section class="screen" id="screenB" hidden>
+    <section class="block violet" aria-labelledby="rcHead">
+      <h2 id="rcHead"><span class="badge">1</span> レスト条件</h2>
+      <div class="row2">
+        <div class="field">
+          <label for="restStart">レスト開始</label>
+          <input type="time" id="restStart" value="22:00" />
+        </div>
+        <div class="field">
+          <label for="restEnd">レスト終了</label>
+          <input type="time" id="restEnd" value="02:00" />
+        </div>
+      </div>
+      <div class="row3">
+        <div class="field">
+          <label for="shifts">交替数</label>
+          <input type="number" id="shifts" min="1" step="1" value="2" />
+        </div>
+        <div class="field">
+          <label for="buffer">バッファ（分）</label>
+          <input type="number" id="buffer" min="0" step="1" value="0" />
+        </div>
+        <div class="field">
+          <label for="baseTz">基準タイムゾーン</label>
+          <select id="baseTz">
+            <option value="dep">出発地</option>
+            <option value="arr">到着地</option>
+            <option value="utc">UTC</option>
+          </select>
+        </div>
+      </div>
+      <div class="hint">終了が開始以前の場合は日跨ぎ（翌日）として扱います。都市は「時間計算」モードで選ぶと併記に反映されます。</div>
+      <div class="clock" id="restCities">出発地・到着地: 未選択</div>
+    </section>
+
+    <section class="block violet" id="restResult" aria-labelledby="rrHead" aria-live="polite">
+      <h2 id="rrHead"><span class="badge">2</span> 分割結果</h2>
+      <div class="rest-summary" id="restSummary">
+        <div class="sub">条件を入力すると各グループのレスト時間帯を表示します</div>
+      </div>
+      <div class="table-scroll"><div id="restTable"></div></div>
+      <div id="restMsg"></div>
+    </section>
+  </section>
+
+  <footer>
+    計算はすべてブラウザ内で完結（IANA / <code>Intl</code>）。GPS座標や個人データは送信しません。
+  </footer>
+</div>
+
+<script>
+"use strict";
+
+/* ================= タイムゾーン計算コア ================= */
+var _dtfCache = {};
+function dtfFor(zone) {
+  if (!_dtfCache[zone]) {
+    _dtfCache[zone] = new Intl.DateTimeFormat('en-US', {
+      timeZone: zone, hour12: false,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    });
+  }
+  return _dtfCache[zone];
+}
+function getParts(zone, utcMs) {
+  var arr = dtfFor(zone).formatToParts(new Date(utcMs));
+  var m = {};
+  for (var i = 0; i < arr.length; i++) m[arr[i].type] = arr[i].value;
+  var hour = m.hour === '24' ? 0 : parseInt(m.hour, 10);
+  return { y: +m.year, mo: +m.month, d: +m.day, h: hour, mi: +m.minute, s: +m.second };
+}
+function tzOffsetMs(zone, utcMs) {
+  var p = getParts(zone, utcMs);
+  var asIfUTC = Date.UTC(p.y, p.mo - 1, p.d, p.h, p.mi, p.s);
+  return asIfUTC - utcMs;
+}
+function wallTimeToUTC(zone, y, mo, d, h, mi) {
+  var asUTC = Date.UTC(y, mo - 1, d, h, mi, 0);
+  var off1 = tzOffsetMs(zone, asUTC);
+  var utc = asUTC - off1;
+  var off2 = tzOffsetMs(zone, utc);
+  if (off2 !== off1) utc = asUTC - off2;
+  return utc;
+}
+function pad(n) { return String(n).padStart(2, '0'); }
+function fmtOffset(ms) {
+  var sign = ms < 0 ? '-' : '+';
+  var abs = Math.abs(ms), totalMin = Math.round(abs / 60000);
+  var h = Math.floor(totalMin / 60), m = totalMin % 60;
+  return 'UTC' + sign + h + (m ? ':' + pad(m) : '');
+}
+function nowInZone(zone) {
+  return new Intl.DateTimeFormat('ja-JP', {
+    timeZone: zone, hour12: false,
+    year: 'numeric', month: 'short', day: 'numeric', weekday: 'short',
+    hour: '2-digit', minute: '2-digit'
+  }).format(new Date());
+}
+function timeInZone(utcMs, zone) { var p = getParts(zone, utcMs); return pad(p.h) + ':' + pad(p.mi); }
+function dayNumber(utcMs, zone) { var p = getParts(zone, utcMs); return Date.UTC(p.y, p.mo - 1, p.d) / 86400000; }
+function parseLocalInput(v) {
+  if (!v) return null;
+  var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(v);
+  if (!m) return null;
+  return { y: +m[1], mo: +m[2], d: +m[3], h: +m[4], mi: +m[5] };
+}
+function parseTime(v) {
+  if (!v) return null;
+  var m = /^(\d{2}):(\d{2})/.exec(v);
+  if (!m) return null;
+  return { h: +m[1], mi: +m[2] };
+}
+
+/* ================= 都市マスタ ================= */
+var ALIASES = {
+  'Asia/Tokyo': ['とうきょう','東京','tokyo','japan','日本'],
+  'Asia/Osaka': ['おおさか','大阪','osaka'],
+  'Asia/Seoul': ['ソウル','soul','korea','韓国'],
+  'Asia/Shanghai': ['シャンハイ','上海','beijing','北京','china','中国'],
+  'Asia/Hong_Kong': ['ホンコン','香港','hongkong'],
+  'Asia/Singapore': ['シンガポール'],
+  'Asia/Bangkok': ['バンコク','thailand','タイ'],
+  'Asia/Dubai': ['ドバイ','uae'],
+  'Asia/Kolkata': ['インド','india','デリー','delhi','mumbai','ムンバイ','calcutta'],
+  'Asia/Jakarta': ['ジャカルタ','indonesia'],
+  'Asia/Manila': ['マニラ','philippines','フィリピン'],
+  'Asia/Taipei': ['タイペイ','台北','taiwan','台湾'],
+  'Europe/London': ['ロンドン','london','uk','イギリス','england'],
+  'Europe/Paris': ['パリ','paris','france','フランス'],
+  'Europe/Berlin': ['ベルリン','berlin','germany','ドイツ'],
+  'Europe/Frankfurt': ['フランクフルト'],
+  'Europe/Rome': ['ローマ','rome','italy','イタリア'],
+  'Europe/Madrid': ['マドリード','spain','スペイン'],
+  'Europe/Amsterdam': ['アムステルダム','netherlands','オランダ'],
+  'Europe/Zurich': ['チューリッヒ','swiss','スイス'],
+  'Europe/Moscow': ['モスクワ','russia','ロシア'],
+  'Europe/Istanbul': ['イスタンブール','turkey','トルコ'],
+  'America/New_York': ['ニューヨーク','new york','nyc','usa','アメリカ','ny'],
+  'America/Los_Angeles': ['ロサンゼルス','los angeles','la','california','サンフランシスコ','san francisco'],
+  'America/Chicago': ['シカゴ','chicago'],
+  'America/Denver': ['デンバー','denver'],
+  'America/Toronto': ['トロント','canada','カナダ'],
+  'America/Vancouver': ['バンクーバー'],
+  'America/Mexico_City': ['メキシコ','mexico','メキシコシティ'],
+  'America/Sao_Paulo': ['サンパウロ','brazil','ブラジル'],
+  'America/Honolulu': ['ホノルル','hawaii','ハワイ'],
+  'Australia/Sydney': ['シドニー','sydney','australia','オーストラリア'],
+  'Australia/Melbourne': ['メルボルン'],
+  'Pacific/Auckland': ['オークランド','new zealand','ニュージーランド'],
+  'Africa/Cairo': ['カイロ','egypt','エジプト'],
+  'Africa/Johannesburg': ['ヨハネスブルグ','south africa','南アフリカ'],
+  'UTC': ['utc','gmt','協定世界時']
+};
+var FALLBACK_ZONES = Object.keys(ALIASES);
+function buildCities() {
+  var zones;
+  try { zones = Intl.supportedValuesOf('timeZone').slice(); }
+  catch (e) { zones = FALLBACK_ZONES.slice(); }
+  if (zones.indexOf('UTC') === -1) zones.push('UTC');
+  var list = [];
+  for (var i = 0; i < zones.length; i++) {
+    var z = zones[i], parts = z.split('/');
+    var city = parts[parts.length - 1].replace(/_/g, ' ');
+    var region = parts.length > 1 ? parts[0].replace(/_/g, ' ') : '';
+    var search = (city + ' ' + region).toLowerCase();
+    var al = ALIASES[z] || [];
+    if (al.length) search += ' ' + al.join(' ').toLowerCase();
+    list.push({ zone: z, city: city, region: region, search: search });
+  }
+  list.sort(function (a, b) {
+    var pa = ALIASES[a.zone] ? 0 : 1, pb = ALIASES[b.zone] ? 0 : 1;
+    if (pa !== pb) return pa - pb;
+    return a.city.localeCompare(b.city);
+  });
+  return list;
+}
+var CITIES = buildCities();
+function cityName(zone) { return zone ? zone.split('/').pop().replace(/_/g, ' ') : ''; }
+
+/* ================= コンボボックス ================= */
+function createCombobox(inputId, listId, onSelect) {
+  var input = document.getElementById(inputId);
+  var listEl = document.getElementById(listId);
+  var active = -1, matches = [], selectedZone = null;
+  function close() { listEl.hidden = true; input.setAttribute('aria-expanded', 'false'); active = -1; }
+  function render(items) {
+    matches = items; listEl.innerHTML = '';
+    if (!items.length) {
+      var li = document.createElement('li'); li.className = 'empty'; li.textContent = '一致する都市がありません';
+      listEl.appendChild(li);
+    } else {
+      for (var i = 0; i < items.length; i++) {
+        var it = items[i];
+        var li = document.createElement('li');
+        li.setAttribute('role', 'option'); li.dataset.idx = i;
+        var name = document.createElement('span'); name.textContent = it.city;
+        var reg = document.createElement('span'); reg.className = 'region'; reg.textContent = it.zone;
+        li.appendChild(name); li.appendChild(reg);
+        li.addEventListener('mousedown', (function (idx) { return function (e) { e.preventDefault(); pick(idx); }; })(i));
+        listEl.appendChild(li);
+      }
+    }
+    listEl.hidden = false; input.setAttribute('aria-expanded', 'true');
+  }
+  function search(q) {
+    q = q.trim().toLowerCase(); var res = [];
+    if (!q) { for (var i = 0; i < CITIES.length && res.length < 60; i++) if (ALIASES[CITIES[i].zone]) res.push(CITIES[i]); return res; }
+    for (var j = 0; j < CITIES.length && res.length < 60; j++) if (CITIES[j].search.indexOf(q) !== -1) res.push(CITIES[j]);
+    return res;
+  }
+  function pick(idx) {
+    var it = matches[idx]; if (!it) return;
+    selectedZone = it.zone; input.value = it.city + ' — ' + it.zone; close(); onSelect(it.zone);
+  }
+  function highlight(next) {
+    var lis = listEl.querySelectorAll('li[role="option"]'); if (!lis.length) return;
+    active = (next + lis.length) % lis.length;
+    for (var i = 0; i < lis.length; i++) lis[i].setAttribute('aria-selected', i === active ? 'true' : 'false');
+    lis[active].scrollIntoView({ block: 'nearest' });
+  }
+  input.addEventListener('input', function () { selectedZone = null; onSelect(null); render(search(input.value)); });
+  input.addEventListener('focus', function () { render(search(input.value)); });
+  input.addEventListener('keydown', function (e) {
+    if (listEl.hidden && e.key === 'ArrowDown') { render(search(input.value)); return; }
+    if (e.key === 'ArrowDown') { e.preventDefault(); highlight(active + 1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); highlight(active - 1); }
+    else if (e.key === 'Enter') { if (!listEl.hidden && active >= 0) { e.preventDefault(); pick(active); } }
+    else if (e.key === 'Escape') { close(); }
+  });
+  input.addEventListener('blur', function () { setTimeout(close, 120); });
+  return { getZone: function () { return selectedZone; } };
+}
+
+/* ================= 共有状態 ================= */
+function depZone() { return depBox.getZone(); }
+function arrZone() { return arrBox.getZone(); }
+var homeTz = null;
+
+/* ================= 画面遷移 ================= */
+var screens = { entry: document.getElementById('screenEntry'), a: document.getElementById('screenA'), b: document.getElementById('screenB') };
+var backBtn = document.getElementById('backBtn');
+var appTitle = document.getElementById('appTitle');
+var appSub = document.getElementById('appSub');
+function show(name) {
+  screens.entry.hidden = name !== 'entry';
+  screens.a.hidden = name !== 'a';
+  screens.b.hidden = name !== 'b';
+  backBtn.hidden = name === 'entry';
+  if (name === 'entry') { appTitle.textContent = 'タイムゾーン時間計算'; appSub.textContent = '用途に応じて2つのモードを選べます'; updateSharedNote(); }
+  else if (name === 'a') { appTitle.textContent = 'モードA｜時間計算'; appSub.textContent = '所要時間と現在地との時差'; }
+  else { appTitle.textContent = 'モードB｜クルーレスト分割'; appSub.textContent = 'レスト時間帯を交替数で分割'; updateRestCities(); recalcRest(); }
+  window.scrollTo(0, 0);
+}
+document.getElementById('goA').addEventListener('click', function () { show('a'); });
+document.getElementById('goB').addEventListener('click', function () { show('b'); });
+backBtn.addEventListener('click', function () { show('entry'); });
+function updateSharedNote() {
+  var note = document.getElementById('sharedNote');
+  var d = depZone(), a = arrZone();
+  if (!d && !a) note.textContent = '出発地・到着地はまだ選択されていません';
+  else note.textContent = '共有中の都市 — 出発地: ' + (d ? cityName(d) : '未選択') + ' / 到着地: ' + (a ? cityName(a) : '未選択');
+}
+
+/* ================= モードA ================= */
+var depClock = document.getElementById('depClock');
+var arrClock = document.getElementById('arrClock');
+var durationView = document.getElementById('durationView');
+var resultMsg = document.getElementById('resultMsg');
+var homeDiffs = document.getElementById('homeDiffs');
+var depTimeEl = document.getElementById('depTime');
+var arrTimeEl = document.getElementById('arrTime');
+
+var depBox = createCombobox('depInput', 'depList', function (zone) { onCityChange(depClock, zone); });
+var arrBox = createCombobox('arrInput', 'arrList', function (zone) { onCityChange(arrClock, zone); });
+function onCityChange(clockEl, zone) {
+  updateClock(clockEl, zone);
+  recalc(); updateHomeDiffs(); updateSharedNote(); updateRestCities(); recalcRest();
+}
+function updateClock(el, zone) {
+  if (!zone) { el.innerHTML = '都市を選ぶと現在時刻を表示します'; return; }
+  var offNow = tzOffsetMs(zone, Date.now());
+  el.innerHTML = '現在: <b>' + nowInZone(zone) + '</b> <span class="off">(' + fmtOffset(offNow) + ')</span>';
+}
+function fmtDurationParts(ms) {
+  var totalMin = Math.round(ms / 60000);
+  return { h: Math.floor(totalMin / 60), m: totalMin % 60, totalMin: totalMin };
+}
+function fmtDiffPhrase(ms) {
+  if (ms === 0) return '時差なし';
+  var abs = Math.abs(ms), totalMin = Math.round(abs / 60000);
+  var h = Math.floor(totalMin / 60), m = totalMin % 60;
+  return (ms > 0 ? '+' : '−') + h + '時間' + (m ? m + '分' : '');
+}
+function recalc() {
+  var dz = depZone(), az = arrZone();
+  var dep = parseLocalInput(depTimeEl.value), arr = parseLocalInput(arrTimeEl.value);
+  resultMsg.innerHTML = '';
+  if (!dz || !az || !dep || !arr) {
+    durationView.innerHTML = '<div class="sub">出発地・到着地と日時をすべて入力すると自動計算します</div>'; return;
+  }
+  var depUtc = wallTimeToUTC(dz, dep.y, dep.mo, dep.d, dep.h, dep.mi);
+  var arrUtc = wallTimeToUTC(az, arr.y, arr.mo, arr.d, arr.h, arr.mi);
+  var diff = arrUtc - depUtc;
+  if (diff < 0) {
+    durationView.innerHTML = '<div class="sub">—</div>';
+    resultMsg.innerHTML = '<div class="msg error">到着が出発より前です。日付・時刻を確認してください。</div>'; return;
+  }
+  var p = fmtDurationParts(diff), big;
+  if (diff === 0) big = '<span>0</span><span class="unit">分</span>';
+  else big = '<span>' + p.h + '</span><span class="unit">時間</span><span>' + pad(p.m) + '</span><span class="unit">分</span>';
+  var sub = '';
+  if (p.h >= 24) { var days = Math.floor(p.h / 24), rem = p.h % 24; sub = '（' + days + '日 ' + rem + '時間' + (p.m ? ' ' + p.m + '分' : '') + '）'; }
+  var cityDiff = tzOffsetMs(az, depUtc) - tzOffsetMs(dz, depUtc);
+  var diffText = cityDiff === 0
+    ? cityName(az) + ' と ' + cityName(dz) + ' は時差なし（出発時点）'
+    : cityName(az) + ' は ' + cityName(dz) + ' より ' + fmtDiffPhrase(cityDiff) + '（出発時点）';
+  durationView.innerHTML = '<div class="big">' + big + '</div>' + (sub ? '<div class="sub">' + sub + '</div>' : '') + '<div class="sub">' + diffText + '</div>';
+  if (p.h >= 48) resultMsg.innerHTML = '<div class="msg warn">所要時間が48時間を超えています。日付の入力が正しいかご確認ください。</div>';
+  else resultMsg.innerHTML = '<div class="msg info">両ローカル時刻をUTCへ変換して差分を算出しました（DST・日跨ぎ対応）。</div>';
+}
+function updateHomeDiffs() {
+  homeDiffs.innerHTML = '';
+  if (!homeTz) return;
+  var now = Date.now();
+  var pairs = [{ label: '出発地', zone: depZone() }, { label: '到着地', zone: arrZone() }];
+  var any = false;
+  for (var i = 0; i < pairs.length; i++) {
+    var z = pairs[i].zone; if (!z) continue; any = true;
+    var d = tzOffsetMs(z, now) - tzOffsetMs(homeTz, now);
+    var phrase = d === 0 ? '現在地と同じ' : '現在地より ' + fmtDiffPhrase(d);
+    var row = document.createElement('div'); row.className = 'diffrow';
+    row.innerHTML = '<span class="city">' + pairs[i].label + '：' + cityName(z) +
+      '<br><span class="now">現地 ' + nowInZone(z) + '</span></span><span class="val">' + phrase + '</span>';
+    homeDiffs.appendChild(row);
+  }
+  if (!any) homeDiffs.innerHTML = '<div class="diffrow"><span class="now">出発地・到着地を選ぶと、現在地との時差を表示します。</span></div>';
+}
+depTimeEl.addEventListener('input', function () { recalc(); recalcRest(); });
+arrTimeEl.addEventListener('input', function () { recalc(); });
+
+/* ================= モードB｜クルーレスト分割 ================= */
+var restStartEl = document.getElementById('restStart');
+var restEndEl = document.getElementById('restEnd');
+var shiftsEl = document.getElementById('shifts');
+var bufferEl = document.getElementById('buffer');
+var baseTzEl = document.getElementById('baseTz');
+var restSummary = document.getElementById('restSummary');
+var restTable = document.getElementById('restTable');
+var restMsg = document.getElementById('restMsg');
+var restCities = document.getElementById('restCities');
+
+[restStartEl, restEndEl, shiftsEl, bufferEl, baseTzEl].forEach(function (el) {
+  el.addEventListener('input', recalcRest);
+  el.addEventListener('change', recalcRest);
+});
+function updateRestCities() {
+  var d = depZone(), a = arrZone();
+  restCities.innerHTML = '出発地: <b>' + (d ? cityName(d) : '未選択') + '</b> ／ 到着地: <b>' + (a ? cityName(a) : '未選択') + '</b>'
+    + (!d && !a ? ' — 「時間計算」モードで選ぶと各TZに併記されます' : '');
+}
+function fmtMinLabel(min) { var h = Math.floor(min / 60), m = min % 60; return (h ? h + '時間' : '') + (m || !h ? m + '分' : ''); }
+
+function recalcRest() {
+  restMsg.innerHTML = '';
+  var s = parseTime(restStartEl.value), e = parseTime(restEndEl.value);
+  var shifts = parseInt(shiftsEl.value, 10);
+  var buffer = parseInt(bufferEl.value, 10); if (isNaN(buffer) || buffer < 0) buffer = 0;
+
+  if (!s || !e) { restSummary.innerHTML = '<div class="sub">レスト開始・終了を入力してください</div>'; restTable.innerHTML = ''; return; }
+  if (isNaN(shifts) || shifts < 1) {
+    restSummary.innerHTML = '<div class="sub">—</div>'; restTable.innerHTML = '';
+    restMsg.innerHTML = '<div class="msg error">交替数は1以上を入力してください。</div>'; return;
+  }
+  var totalMin = (e.h * 60 + e.mi) - (s.h * 60 + s.mi);
+  if (totalMin < 0) totalMin += 1440;       // 日跨ぎ
+  if (totalMin === 0) {
+    restSummary.innerHTML = '<div class="sub">—</div>'; restTable.innerHTML = '';
+    restMsg.innerHTML = '<div class="msg error">レスト時間帯が不正です（開始と終了が同じ）。</div>'; return;
+  }
+  var bufferTotal = buffer * (shifts - 1);
+  var available = totalMin - bufferTotal;
+  if (available <= 0) {
+    restSummary.innerHTML = '<div class="sub">—</div>'; restTable.innerHTML = '';
+    restMsg.innerHTML = '<div class="msg error">バッファが長すぎます（レスト全体 ' + fmtMinLabel(totalMin) + ' に対しバッファ合計 ' + fmtMinLabel(bufferTotal) + '）。</div>'; return;
+  }
+  var base = Math.floor(available / shifts);
+  var rem = available - base * shifts;   // 先頭 rem グループへ +1分
+  var lengths = [];
+  for (var i = 0; i < shifts; i++) lengths.push(base + (i < rem ? 1 : 0));
+
+  // 基準タイムゾーンの解決（未選択の都市を指した場合はUTCへフォールバック）
+  var baseChoice = baseTzEl.value;
+  var resolved = baseChoice === 'utc' ? 'UTC' : (baseChoice === 'dep' ? depZone() : arrZone());
+  var fellBack = false, anchorZone = resolved;
+  if (!anchorZone) { anchorZone = 'UTC'; fellBack = true; }
+
+  // アンカー日付：モードAの出発日があればその日付、なければアンカーTZの今日
+  var refDate;
+  var depLocal = parseLocalInput(depTimeEl.value);
+  if (depLocal && baseChoice === 'dep') refDate = { y: depLocal.y, mo: depLocal.mo, d: depLocal.d };
+  else { var pn = getParts(anchorZone, Date.now()); refDate = { y: pn.y, mo: pn.mo, d: pn.d }; }
+
+  var restStartUTC = wallTimeToUTC(anchorZone, refDate.y, refDate.mo, refDate.d, s.h, s.mi);
+
+  // 表示する列（基準＋選択済み都市＋UTC、重複除去）
+  var cols = [];
+  function addCol(zone, label) {
+    if (!zone) return;
+    for (var k = 0; k < cols.length; k++) if (cols[k].zone === zone) return;
+    cols.push({ zone: zone, label: label });
+  }
+  addCol(anchorZone, baseChoice === 'utc' ? 'UTC（基準）' : (baseChoice === 'dep' ? '出発地（基準）' : '到着地（基準）') + (fellBack ? '→UTC' : ''));
+  addCol(depZone(), '出発地');
+  addCol(arrZone(), '到着地');
+  addCol('UTC', 'UTC');
+
+  function cell(utcMs, zone) {
+    var hm = timeInZone(utcMs, zone);
+    var delta = dayNumber(utcMs, zone) - dayNumber(restStartUTC, zone);
+    return hm + (delta ? ' <span class="plus">(' + (delta > 0 ? '+' : '') + delta + 'd)</span>' : '');
+  }
+
+  // テーブル生成
+  var html = '<table class="rest"><thead><tr><th>グループ</th><th>レスト長</th>';
+  for (var c = 0; c < cols.length; c++) html += '<th>' + cols[c].label + '<span class="zid">' + cols[c].zone + '</span></th>';
+  html += '</tr></thead><tbody>';
+  var cursor = 0;
+  for (var g = 0; g < shifts; g++) {
+    var gStartMin = cursor, gEndMin = cursor + lengths[g];
+    var gStartUTC = restStartUTC + gStartMin * 60000;
+    var gEndUTC = restStartUTC + gEndMin * 60000;
+    html += '<tr><td class="g">G' + (g + 1) + '</td><td class="len">' + fmtMinLabel(lengths[g]) + '</td>';
+    for (var cc = 0; cc < cols.length; cc++) html += '<td>' + cell(gStartUTC, cols[cc].zone) + '–' + cell(gEndUTC, cols[cc].zone) + '</td>';
+    html += '</tr>';
+    cursor = gEndMin + buffer;
+  }
+  html += '</tbody></table>';
+  restTable.innerHTML = html;
+
+  var evenLen = rem === 0;
+  restSummary.innerHTML = '<div class="big">' + shifts + '<span class="unit">交替</span></div>' +
+    '<div class="sub">レスト全体 ' + fmtMinLabel(totalMin) + (buffer ? ' ／ バッファ ' + buffer + '分×' + (shifts - 1) : '') +
+    ' ／ 1グループ ' + (evenLen ? '約' : '') + fmtMinLabel(base) + (evenLen ? '' : '〜' + fmtMinLabel(base + 1)) + '</div>';
+
+  var notes = [];
+  if (rem > 0) notes.push('割り切れないため先頭 ' + rem + ' グループに1分ずつ配分しました。');
+  if (fellBack) notes.push('基準タイムゾーンに指定した都市が未選択のため、UTC基準で計算しています（「時間計算」モードで都市を選ぶと反映）。');
+  if (notes.length) restMsg.innerHTML = '<div class="msg info">' + notes.join('<br>') + '</div>';
+}
+
+/* ================= 現在地TZ ================= */
+function initHomeTz() {
+  var line = document.getElementById('homeTzLine');
+  var fb = document.getElementById('homeFallback');
+  var sel = document.getElementById('homeSelect');
+  var detected = null;
+  try { detected = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) {}
+  for (var i = 0; i < CITIES.length; i++) {
+    var o = document.createElement('option'); o.value = CITIES[i].zone;
+    o.textContent = CITIES[i].city + ' — ' + CITIES[i].zone; sel.appendChild(o);
+  }
+  function paint(mode) {
+    var off = tzOffsetMs(homeTz, Date.now());
+    line.innerHTML = '現在地（' + mode + '）：<b>' + homeTz + '</b> <span style="color:var(--accent)">(' + fmtOffset(off) + ')</span> ・ ' + nowInZone(homeTz);
+  }
+  if (detected) {
+    homeTz = detected; paint('自動取得');
+    if (sel.querySelector('option[value="' + detected + '"]')) sel.value = detected;
+  } else {
+    line.innerHTML = '現在地を自動取得できませんでした。下から手動で選択してください。';
+    homeTz = sel.value || null;
+  }
+  fb.hidden = false; // 手動上書き用に常時表示
+  sel.addEventListener('change', function () { homeTz = sel.value; paint('手動選択'); updateHomeDiffs(); });
+  updateHomeDiffs();
+}
+
+/* ================= 初期化 ================= */
+(function setDefaults() {
+  var now = new Date();
+  var v = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) + 'T' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+  depTimeEl.value = v;
+})();
+initHomeTz();
+show('entry');
+
+setInterval(function () {
+  var dz = depZone(), az = arrZone();
+  if (dz) updateClock(depClock, dz);
+  if (az) updateClock(arrClock, az);
+  updateHomeDiffs();
+  var line = document.getElementById('homeTzLine');
+  if (homeTz && line && line.querySelector('b')) {
+    var off = tzOffsetMs(homeTz, Date.now());
+    line.innerHTML = '現在地：<b>' + homeTz + '</b> <span style="color:var(--accent)">(' + fmtOffset(off) + ')</span> ・ ' + nowInZone(homeTz);
+  }
+}, 60000);
+</script>
+</body>
+</html>

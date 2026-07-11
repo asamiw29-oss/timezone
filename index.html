@@ -6,108 +6,125 @@
 <title>タイムゾーン時間計算 / クルーレスト分割</title>
 <style>
   :root {
-    --bg: #0f172a; --panel: #1e293b; --panel-2: #273449; --line: #334155;
-    --text: #e2e8f0; --muted: #94a3b8; --accent: #38bdf8; --accent-strong: #0ea5e9;
-    --good: #34d399; --bad: #f87171; --warn: #fbbf24; --violet: #a78bfa; --radius: 14px;
+    --bg: #f6f5f2; --panel: #ffffff; --panel-2: #f4f3ef; --line: #e6e3dc;
+    --text: #1b1b1d; --muted: #8b8a85; --accent: #2b2b2e; --accent-strong: #1b1b1d;
+    --good: #1b1b1d; --bad: #a12d24; --warn: #7a5c00; --violet: #4a4a4f; --radius: 16px;
+    --serif: "Playfair Display", "Didot", "Hiragino Mincho ProN", "Yu Mincho", "Times New Roman", serif;
+    --sans: "Helvetica Neue", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, system-ui, -apple-system, sans-serif;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body {
-    background: linear-gradient(160deg, #0b1120, #0f172a 40%, #111827);
+    background: var(--bg);
     color: var(--text);
-    font-family: -apple-system, "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, system-ui, sans-serif;
-    line-height: 1.6; min-height: 100vh; padding: 20px 16px 64px;
+    font-family: var(--sans);
+    line-height: 1.65; min-height: 100vh; padding: 20px 16px 64px;
+    letter-spacing: .01em;
+    -webkit-font-smoothing: antialiased;
   }
-  .wrap { max-width: 760px; margin: 0 auto; }
+  .wrap { max-width: 760px; margin: 0 auto; position: relative; z-index: 1; }
 
-  header.app { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  /* ===== 飛行機（モノクロ・右端に固定配置） ===== */
+  .sky { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+  .plane {
+    position: absolute; top: 10%; right: 4%;
+    width: 88px; height: 88px; opacity: .14;
+    color: #1b1b1d;
+    transform: rotate(-18deg);
+  }
+  .plane svg { width: 100%; height: 100%; display: block; }
+  .plane.p2, .plane.p3 { display: none; }
+
+  header.app { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
   header.app .back {
     background: var(--panel); border: 1px solid var(--line); color: var(--text);
-    border-radius: 10px; padding: 8px 12px; font-size: .9rem; cursor: pointer;
+    border-radius: 999px; padding: 8px 16px; font-size: .85rem; cursor: pointer;
+    transition: border-color .15s, background .15s;
   }
-  header.app .back:hover { border-color: var(--accent); }
+  header.app .back:hover { border-color: var(--accent); background: #fafafa; }
   header.app .back[hidden] { display: none; }
-  header.app h1 { font-size: 1.15rem; margin: 0; letter-spacing: .02em; }
-  header.app .sub { color: var(--muted); font-size: .78rem; }
+  header.app h1 { font-family: var(--serif); font-size: 1.5rem; font-weight: 600; margin: 0; letter-spacing: .01em; }
+  header.app .sub { color: var(--muted); font-size: .78rem; letter-spacing: .04em; }
 
   .screen[hidden] { display: none; }
 
   /* entry */
-  .entry-hero { text-align: center; margin: 8px 0 24px; }
-  .entry-hero h2 { margin: 0 0 6px; font-size: 1.4rem; }
-  .entry-hero p { margin: 0; color: var(--muted); font-size: .9rem; }
-  .mode-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .entry-hero { text-align: center; margin: 16px 0 30px; }
+  .entry-hero h2 { font-family: var(--serif); font-weight: 600; margin: 0 0 10px; font-size: 2rem; letter-spacing: .02em; }
+  .entry-hero p { margin: 0; color: var(--muted); font-size: .9rem; letter-spacing: .03em; }
+  .mode-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   @media (max-width: 560px) { .mode-cards { grid-template-columns: 1fr; } }
   .mode-card {
     text-align: left; background: var(--panel); border: 1px solid var(--line);
-    border-radius: var(--radius); padding: 20px 18px; cursor: pointer; color: var(--text);
-    transition: transform .12s, border-color .12s, box-shadow .12s;
+    border-radius: var(--radius); padding: 24px 22px; cursor: pointer; color: var(--text);
+    transition: transform .16s, border-color .16s, box-shadow .16s;
   }
-  .mode-card:hover { transform: translateY(-3px); border-color: var(--accent); box-shadow: 0 12px 30px rgba(0,0,0,.35); }
-  .mode-card .ico { font-size: 1.8rem; }
-  .mode-card h3 { margin: 8px 0 4px; font-size: 1.1rem; }
-  .mode-card.b h3 { color: var(--violet); }
-  .mode-card.a h3 { color: var(--accent); }
+  .mode-card:hover { transform: translateY(-3px); border-color: var(--accent); box-shadow: 0 16px 36px rgba(27,27,29,.10); }
+  .mode-card .ico { font-size: 1.8rem; filter: grayscale(1); }
+  .mode-card h3 { font-family: var(--serif); font-weight: 600; margin: 12px 0 6px; font-size: 1.25rem; }
+  .mode-card.b h3 { color: var(--text); }
+  .mode-card.a h3 { color: var(--text); }
   .mode-card p { margin: 0; color: var(--muted); font-size: .85rem; }
-  .shared-note { margin-top: 16px; text-align: center; color: var(--muted); font-size: .78rem; }
+  .shared-note { margin-top: 20px; text-align: center; color: var(--muted); font-size: .78rem; letter-spacing: .03em; }
 
   .block {
     background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
-    padding: 18px 18px 16px; margin-bottom: 16px; box-shadow: 0 8px 30px rgba(0,0,0,.25);
+    padding: 22px 22px 18px; margin-bottom: 18px; box-shadow: 0 10px 30px rgba(27,27,29,.05);
   }
   .block h2 {
-    font-size: .8rem; text-transform: uppercase; letter-spacing: .12em;
-    color: var(--accent); margin: 0 0 12px; font-weight: 700; display: flex; align-items: center; gap: 8px;
+    font-size: .72rem; text-transform: uppercase; letter-spacing: .18em;
+    color: var(--accent); margin: 0 0 16px; font-weight: 700; display: flex; align-items: center; gap: 10px;
   }
   .block.violet h2 { color: var(--violet); }
   .badge { display:inline-block; width: 22px; height: 22px; border-radius: 50%;
-    background: var(--accent-strong); color:#04121e; text-align:center; line-height:22px; font-size:.75rem; font-weight:800; }
+    background: var(--accent-strong); color:#ffffff; text-align:center; line-height:22px; font-size:.72rem; font-weight:700; }
   .block.violet .badge { background: var(--violet); }
 
-  label { display: block; font-size: .8rem; color: var(--muted); margin: 0 0 4px; }
-  .field { margin-bottom: 12px; }
-  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  label { display: block; font-size: .78rem; color: var(--muted); margin: 0 0 5px; letter-spacing: .02em; }
+  .field { margin-bottom: 14px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
   @media (max-width: 520px) { .row3 { grid-template-columns: 1fr 1fr; } }
 
   input[type="text"], input[type="datetime-local"], input[type="time"], input[type="number"], select {
-    width: 100%; padding: 11px 12px; font-size: 1rem; background: var(--panel-2); color: var(--text);
-    border: 1px solid var(--line); border-radius: 10px; outline: none; -webkit-appearance: none; appearance: none;
+    width: 100%; padding: 11px 13px; font-size: 1rem; background: #ffffff; color: var(--text);
+    border: 1px solid var(--line); border-radius: 12px; outline: none; -webkit-appearance: none; appearance: none;
+    font-family: var(--sans);
   }
-  input[type="datetime-local"], input[type="time"] { color-scheme: dark; }
-  input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(56,189,248,.18); }
+  input[type="datetime-local"], input[type="time"] { color-scheme: light; }
+  input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(27,27,29,.10); }
 
   .combo { position: relative; }
   .combo ul {
-    list-style: none; margin: 4px 0 0; padding: 4px; position: absolute; z-index: 30; left: 0; right: 0; top: 100%;
-    background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
-    max-height: 260px; overflow-y: auto; box-shadow: 0 12px 30px rgba(0,0,0,.4);
+    list-style: none; margin: 6px 0 0; padding: 5px; position: absolute; z-index: 30; left: 0; right: 0; top: 100%;
+    background: #ffffff; border: 1px solid var(--line); border-radius: 12px;
+    max-height: 260px; overflow-y: auto; box-shadow: 0 16px 36px rgba(27,27,29,.14);
   }
   .combo ul[hidden] { display: none; }
-  .combo li { padding: 8px 10px; border-radius: 7px; cursor: pointer; font-size: .95rem;
+  .combo li { padding: 9px 11px; border-radius: 9px; cursor: pointer; font-size: .95rem;
     display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
   .combo li .region { color: var(--muted); font-size: .78rem; white-space: nowrap; }
-  .combo li[aria-selected="true"], .combo li:hover { background: var(--accent-strong); color: #04121e; }
-  .combo li[aria-selected="true"] .region, .combo li:hover .region { color: #063049; }
+  .combo li[aria-selected="true"], .combo li:hover { background: var(--accent-strong); color: #ffffff; }
+  .combo li[aria-selected="true"] .region, .combo li:hover .region { color: #cfcfcf; }
   .combo .empty { color: var(--muted); cursor: default; }
   .combo .empty:hover { background: transparent; color: var(--muted); }
 
-  .clock { margin-top: 6px; font-size: .85rem; color: var(--muted); background: var(--panel-2);
-    border: 1px dashed var(--line); border-radius: 10px; padding: 8px 10px; min-height: 20px; }
+  .clock { margin-top: 8px; font-size: .85rem; color: var(--muted); background: var(--panel-2);
+    border: 1px solid var(--line); border-radius: 12px; padding: 9px 11px; min-height: 20px; }
   .clock b { color: var(--text); font-weight: 600; }
   .clock .off { color: var(--accent); font-weight: 700; }
 
-  #resultBlock { background: linear-gradient(160deg, #172033, #1e293b); }
-  .duration { text-align: center; padding: 6px 0 2px; }
-  .duration .big { font-size: 2.7rem; font-weight: 800; color: var(--good); line-height: 1.1; }
-  .duration .big .unit { font-size: 1.3rem; font-weight: 700; color: var(--text); margin: 0 2px 0 4px; }
-  .duration .sub { color: var(--muted); font-size: .9rem; margin-top: 4px; }
-  .msg { margin-top: 12px; font-size: .9rem; padding: 10px 12px; border-radius: 10px; }
-  .msg.info { background: rgba(56,189,248,.12); border:1px solid rgba(56,189,248,.3); }
-  .msg.error { background: rgba(248,113,113,.12); border:1px solid rgba(248,113,113,.4); color: #fecaca; }
-  .msg.warn { background: rgba(251,191,36,.12); border:1px solid rgba(251,191,36,.4); color: #fde68a; }
+  #resultBlock { background: #ffffff; }
+  .duration { text-align: center; padding: 8px 0 2px; }
+  .duration .big { font-family: var(--serif); font-size: 3rem; font-weight: 600; color: var(--good); line-height: 1.1; letter-spacing: .01em; }
+  .duration .big .unit { font-family: var(--sans); font-size: 1.2rem; font-weight: 500; color: var(--muted); margin: 0 2px 0 5px; }
+  .duration .sub { color: var(--muted); font-size: .9rem; margin-top: 6px; }
+  .msg { margin-top: 14px; font-size: .88rem; padding: 11px 13px; border-radius: 12px; }
+  .msg.info { background: #f4f3ef; border:1px solid var(--line); color: var(--text); }
+  .msg.error { background: #fbeeec; border:1px solid #e6cbc7; color: #8f271f; }
+  .msg.warn { background: #f7f2e2; border:1px solid #e6dcc0; color: #6b5200; }
 
-  .diffrow { display:flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); font-size: .92rem; }
+  .diffrow { display:flex; justify-content: space-between; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); font-size: .92rem; }
   .diffrow:first-of-type { border-top: none; }
   .diffrow .city { color: var(--text); font-weight: 600; }
   .diffrow .val { color: var(--accent); font-weight: 700; white-space: nowrap; }
@@ -118,25 +135,36 @@
   .fallback[hidden] { display: none; }
 
   /* Mode B result table */
-  .rest-summary { text-align: center; margin-bottom: 12px; }
-  .rest-summary .big { font-size: 2rem; font-weight: 800; color: var(--violet); }
-  .rest-summary .big .unit { font-size: 1.1rem; color: var(--text); margin-left: 4px; }
+  .rest-summary { text-align: center; margin-bottom: 14px; }
+  .rest-summary .big { font-family: var(--serif); font-size: 2.2rem; font-weight: 600; color: var(--violet); }
+  .rest-summary .big .unit { font-family: var(--sans); font-size: 1rem; color: var(--muted); margin-left: 5px; }
   .rest-summary .sub { color: var(--muted); font-size: .85rem; }
   .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   table.rest { width: 100%; border-collapse: collapse; font-size: .9rem; min-width: 420px; }
-  table.rest th, table.rest td { padding: 9px 10px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
-  table.rest thead th { color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
+  table.rest th, table.rest td { padding: 10px 11px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  table.rest thead th { color: var(--muted); font-size: .7rem; text-transform: uppercase; letter-spacing: .1em; font-weight: 700; }
   table.rest tbody td.g { font-weight: 700; color: var(--violet); }
   table.rest tbody td.len { color: var(--good); font-weight: 600; }
   table.rest .zid { display:block; font-size: .68rem; color: var(--muted); font-weight: 400; letter-spacing: 0; text-transform: none; }
   table.rest td .plus { color: var(--warn); font-size: .78rem; }
 
-  footer { text-align: center; color: var(--muted); font-size: .75rem; margin-top: 24px; }
+  footer { text-align: center; color: var(--muted); font-size: .75rem; margin-top: 28px; letter-spacing: .02em; }
   code { background: var(--panel-2); padding: 1px 5px; border-radius: 5px; }
-  .hint { font-size: .75rem; color: var(--muted); margin-top: 2px; }
+  .hint { font-size: .75rem; color: var(--muted); margin-top: 4px; }
 </style>
 </head>
 <body>
+<div class="sky" aria-hidden="true">
+  <span class="plane p1">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 16v-2l-8-5V3.5A1.5 1.5 0 0 0 11.5 2 1.5 1.5 0 0 0 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>
+  </span>
+  <span class="plane p2">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 16v-2l-8-5V3.5A1.5 1.5 0 0 0 11.5 2 1.5 1.5 0 0 0 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>
+  </span>
+  <span class="plane p3">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 16v-2l-8-5V3.5A1.5 1.5 0 0 0 11.5 2 1.5 1.5 0 0 0 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>
+  </span>
+</div>
 <div class="wrap">
   <header class="app">
     <button class="back" id="backBtn" hidden>← 入り口</button>
@@ -150,8 +178,34 @@
   <section class="screen" id="screenEntry">
     <div class="entry-hero">
       <h2>どちらを使いますか？</h2>
-      <p>都市の選択は両モードで共有されます</p>
+      <p>先に都市を選んでおくと、両モードで共有されます</p>
     </div>
+
+    <section class="block" id="entryCities" aria-label="出発地・到着地の選択">
+      <h2><span class="badge">📍</span> 出発地・到着地（共通）</h2>
+      <div class="row2">
+        <div>
+          <div class="field combo" id="eDepCombo">
+            <label for="eDepInput">出発地</label>
+            <input type="text" id="eDepInput" role="combobox" aria-expanded="false" aria-autocomplete="list"
+                   aria-controls="eDepList" autocomplete="off" placeholder="例: Tokyo / 東京" />
+            <ul id="eDepList" role="listbox" hidden></ul>
+          </div>
+          <div class="clock" id="eDepClock">都市を選ぶと現在時刻を表示します</div>
+        </div>
+        <div>
+          <div class="field combo" id="eArrCombo">
+            <label for="eArrInput">到着地</label>
+            <input type="text" id="eArrInput" role="combobox" aria-expanded="false" aria-autocomplete="list"
+                   aria-controls="eArrList" autocomplete="off" placeholder="例: New York / ニューヨーク" />
+            <ul id="eArrList" role="listbox" hidden></ul>
+          </div>
+          <div class="clock" id="eArrClock">都市を選ぶと現在時刻を表示します</div>
+        </div>
+      </div>
+      <div class="hint">ここで選ばなくても各モード内で選べます。どちらで選んでも同期します。</div>
+    </section>
+
     <div class="mode-cards">
       <button class="mode-card a" id="goA">
         <div class="ico">🕐</div>
@@ -400,10 +454,11 @@ var CITIES = buildCities();
 function cityName(zone) { return zone ? zone.split('/').pop().replace(/_/g, ' ') : ''; }
 
 /* ================= コンボボックス ================= */
-function createCombobox(inputId, listId, onSelect) {
+function comboLabel(zone) { return cityName(zone) + ' — ' + zone; }
+function createCombobox(inputId, listId, onPick, getCurrent) {
   var input = document.getElementById(inputId);
   var listEl = document.getElementById(listId);
-  var active = -1, matches = [], selectedZone = null;
+  var active = -1, matches = [];
   function close() { listEl.hidden = true; input.setAttribute('aria-expanded', 'false'); active = -1; }
   function render(items) {
     matches = items; listEl.innerHTML = '';
@@ -418,7 +473,7 @@ function createCombobox(inputId, listId, onSelect) {
         var name = document.createElement('span'); name.textContent = it.city;
         var reg = document.createElement('span'); reg.className = 'region'; reg.textContent = it.zone;
         li.appendChild(name); li.appendChild(reg);
-        li.addEventListener('mousedown', (function (idx) { return function (e) { e.preventDefault(); pick(idx); }; })(i));
+        li.addEventListener('mousedown', (function (idx) { return function (e) { e.preventDefault(); confirmPick(idx); }; })(i));
         listEl.appendChild(li);
       }
     }
@@ -430,9 +485,21 @@ function createCombobox(inputId, listId, onSelect) {
     for (var j = 0; j < CITIES.length && res.length < 60; j++) if (CITIES[j].search.indexOf(q) !== -1) res.push(CITIES[j]);
     return res;
   }
-  function pick(idx) {
+  // 打った文字が都市に一致すればそのIANA IDを返す（クリック不要の自動確定用）
+  function matchZone(q, aggressive) {
+    q = (q || '').trim(); if (!q) return null;
+    var lower = q.toLowerCase(), results = search(q); if (!results.length) return null;
+    for (var i = 0; i < results.length; i++) {
+      if (results[i].city.toLowerCase() === lower) return results[i].zone;
+      var al = ALIASES[results[i].zone] || [];
+      for (var k = 0; k < al.length; k++) if (al[k].toLowerCase() === lower) return results[i].zone;
+    }
+    if (results.length === 1 || aggressive) return results[0].zone;
+    return null;
+  }
+  function confirmPick(idx) {
     var it = matches[idx]; if (!it) return;
-    selectedZone = it.zone; input.value = it.city + ' — ' + it.zone; close(); onSelect(it.zone);
+    input.value = comboLabel(it.zone); close(); onPick(it.zone);
   }
   function highlight(next) {
     var lis = listEl.querySelectorAll('li[role="option"]'); if (!lis.length) return;
@@ -440,22 +507,53 @@ function createCombobox(inputId, listId, onSelect) {
     for (var i = 0; i < lis.length; i++) lis[i].setAttribute('aria-selected', i === active ? 'true' : 'false');
     lis[active].scrollIntoView({ block: 'nearest' });
   }
-  input.addEventListener('input', function () { selectedZone = null; onSelect(null); render(search(input.value)); });
+  input.addEventListener('input', function () { render(search(input.value)); });
   input.addEventListener('focus', function () { render(search(input.value)); });
   input.addEventListener('keydown', function (e) {
     if (listEl.hidden && e.key === 'ArrowDown') { render(search(input.value)); return; }
     if (e.key === 'ArrowDown') { e.preventDefault(); highlight(active + 1); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); highlight(active - 1); }
-    else if (e.key === 'Enter') { if (!listEl.hidden && active >= 0) { e.preventDefault(); pick(active); } }
+    else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (!listEl.hidden && active >= 0) confirmPick(active);
+      else { var z = matchZone(input.value, true); if (z) { input.value = comboLabel(z); close(); onPick(z); } }
+    }
     else if (e.key === 'Escape') { close(); }
   });
-  input.addEventListener('blur', function () { setTimeout(close, 120); });
-  return { getZone: function () { return selectedZone; } };
+  input.addEventListener('blur', function () {
+    var z = matchZone(input.value, false);
+    if (z) { input.value = comboLabel(z); onPick(z); }
+    else { var cur = getCurrent(); input.value = cur ? comboLabel(cur) : ''; }
+    setTimeout(close, 120);
+  });
+  return { setDisplay: function (zone) { input.value = zone ? comboLabel(zone) : ''; } };
 }
 
-/* ================= 共有状態 ================= */
-function depZone() { return depBox.getZone(); }
-function arrZone() { return arrBox.getZone(); }
+/* ================= 共有状態（都市は入り口・両モードで共有） ================= */
+var cityState = { dep: null, arr: null };
+var depCombos = [], arrCombos = [];
+function depZone() { return cityState.dep; }
+function arrZone() { return cityState.arr; }
+function setCity(kind, zone) {
+  cityState[kind] = zone || null;
+  var boxes = kind === 'dep' ? depCombos : arrCombos;
+  for (var i = 0; i < boxes.length; i++) boxes[i].setDisplay(cityState[kind]);
+  refreshAll();
+}
+function makeCombo(inputId, listId, kind) {
+  var box = createCombobox(inputId, listId,
+    function (zone) { setCity(kind, zone); },
+    function () { return cityState[kind]; });
+  (kind === 'dep' ? depCombos : arrCombos).push(box);
+  return box;
+}
+function refreshAll() {
+  updateClock(depClock, cityState.dep);
+  updateClock(arrClock, cityState.arr);
+  updateEntryClock(eDepClock, cityState.dep);
+  updateEntryClock(eArrClock, cityState.arr);
+  recalc(); updateHomeDiffs(); updateSharedNote(); updateRestCities(); recalcRest();
+}
 var homeTz = null;
 
 /* ================= 画面遷移 ================= */
@@ -483,6 +581,15 @@ function updateSharedNote() {
   else note.textContent = '共有中の都市 — 出発地: ' + (d ? cityName(d) : '未選択') + ' / 到着地: ' + (a ? cityName(a) : '未選択');
 }
 
+/* ================= 入り口の都市ピッカー用 時計表示 ================= */
+var eDepClock = document.getElementById('eDepClock');
+var eArrClock = document.getElementById('eArrClock');
+function updateEntryClock(el, zone) {
+  if (!el) return;
+  if (!zone) { el.innerHTML = '都市を選ぶと現在時刻を表示します'; return; }
+  el.innerHTML = '<b>' + cityName(zone) + '</b> 現在 ' + nowInZone(zone) + ' <span class="off">(' + fmtOffset(tzOffsetMs(zone, Date.now())) + ')</span>';
+}
+
 /* ================= モードA ================= */
 var depClock = document.getElementById('depClock');
 var arrClock = document.getElementById('arrClock');
@@ -491,13 +598,9 @@ var resultMsg = document.getElementById('resultMsg');
 var homeDiffs = document.getElementById('homeDiffs');
 var depTimeEl = document.getElementById('depTime');
 var arrTimeEl = document.getElementById('arrTime');
+var depInputEl = document.getElementById('depInput');
+var arrInputEl = document.getElementById('arrInput');
 
-var depBox = createCombobox('depInput', 'depList', function (zone) { onCityChange(depClock, zone); });
-var arrBox = createCombobox('arrInput', 'arrList', function (zone) { onCityChange(arrClock, zone); });
-function onCityChange(clockEl, zone) {
-  updateClock(clockEl, zone);
-  recalc(); updateHomeDiffs(); updateSharedNote(); updateRestCities(); recalcRest();
-}
 function updateClock(el, zone) {
   if (!zone) { el.innerHTML = '都市を選ぶと現在時刻を表示します'; return; }
   var offNow = tzOffsetMs(zone, Date.now());
@@ -518,7 +621,12 @@ function recalc() {
   var dep = parseLocalInput(depTimeEl.value), arr = parseLocalInput(arrTimeEl.value);
   resultMsg.innerHTML = '';
   if (!dz || !az || !dep || !arr) {
-    durationView.innerHTML = '<div class="sub">出発地・到着地と日時をすべて入力すると自動計算します</div>'; return;
+    var need = [];
+    if (!dz) need.push(depInputEl.value.trim() ? '出発地を候補から選択' : '出発地を入力');
+    if (!az) need.push(arrInputEl.value.trim() ? '到着地を候補から選択' : '到着地を入力');
+    if (!dep) need.push('出発日時を入力');
+    if (!arr) need.push('到着日時を入力');
+    durationView.innerHTML = '<div class="sub">あと: ' + need.join(' ／ ') + '</div>'; return;
   }
   var depUtc = wallTimeToUTC(dz, dep.y, dep.mo, dep.d, dep.h, dep.mi);
   var arrUtc = wallTimeToUTC(az, arr.y, arr.mo, arr.d, arr.h, arr.mi);
@@ -698,18 +806,25 @@ function initHomeTz() {
 }
 
 /* ================= 初期化 ================= */
+// 入り口とモードA、それぞれの都市ピッカーを共有状態に接続
+makeCombo('eDepInput', 'eDepList', 'dep');
+makeCombo('eArrInput', 'eArrList', 'arr');
+makeCombo('depInput', 'depList', 'dep');
+makeCombo('arrInput', 'arrList', 'arr');
+
 (function setDefaults() {
   var now = new Date();
   var v = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) + 'T' + pad(now.getHours()) + ':' + pad(now.getMinutes());
   depTimeEl.value = v;
 })();
 initHomeTz();
+refreshAll();
 show('entry');
 
 setInterval(function () {
   var dz = depZone(), az = arrZone();
-  if (dz) updateClock(depClock, dz);
-  if (az) updateClock(arrClock, az);
+  if (dz) { updateClock(depClock, dz); updateEntryClock(eDepClock, dz); }
+  if (az) { updateClock(arrClock, az); updateEntryClock(eArrClock, az); }
   updateHomeDiffs();
   var line = document.getElementById('homeTzLine');
   if (homeTz && line && line.querySelector('b')) {

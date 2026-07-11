@@ -79,6 +79,12 @@
   .badge { display:inline-block; width: 22px; height: 22px; border-radius: 50%;
     background: var(--accent-strong); color:#ffffff; text-align:center; line-height:22px; font-size:.72rem; font-weight:700; }
   .block.violet .badge { background: var(--violet); }
+  .badge.plain { background: transparent; width: auto; height: auto; line-height: 1; font-size: 1.25rem; }
+  /* 入り口の「出発地・到着地」見出しを「時間計算」カードの見出しと同じ大きさ・書体に */
+  #entryCities h2 {
+    font-family: var(--serif); font-size: 1.25rem; font-weight: 600;
+    text-transform: none; letter-spacing: .01em; color: var(--text);
+  }
 
   label { display: block; font-size: .78rem; color: var(--muted); margin: 0 0 5px; letter-spacing: .02em; }
   .field { margin-bottom: 14px; }
@@ -182,7 +188,7 @@
     </div>
 
     <section class="block" id="entryCities" aria-label="出発地・到着地の選択">
-      <h2><span class="badge">📍</span> 出発地・到着地（共通）</h2>
+      <h2><span class="badge plain">🌍</span> 出発地・到着地（共通）</h2>
       <div class="row2">
         <div>
           <div class="field combo" id="eDepCombo">
@@ -811,6 +817,9 @@ makeCombo('eDepInput', 'eDepList', 'dep');
 makeCombo('eArrInput', 'eArrList', 'arr');
 makeCombo('depInput', 'depList', 'dep');
 makeCombo('arrInput', 'arrList', 'arr');
+
+// デフォルト出発地を東京に
+setCity('dep', 'Asia/Tokyo');
 
 (function setDefaults() {
   var now = new Date();

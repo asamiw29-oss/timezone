@@ -476,13 +476,14 @@ function renderEntry(){
       <p>CIQ・seal/lock・引き継ぎ・アナウンス打ち合わせ・VIP対応など、着陸前のクルー業務を確認。進捗は端末に自動保存。</p>
       <div class="go">選択 →</div>
     </button>
-  </div>
-  <button class="soon" id="mD">
-    <span class="badge">OPEN ↗</span>
-    <div class="kicker">MODE D</div>
-    <h2>Atlas 連携・グルメ</h2>
-    <p>到着地のレイオーバーおすすめスポット（グルメ等）を姉妹アプリ Atlas Layover で表示。</p>
-  </button>`;
+    <button class="mode-card" id="mD">
+      <div class="stub"><span>ATLAS</span></div>
+      <div class="kicker">MODE D</div>
+      <h2>Atlas 連携・グルメ</h2>
+      <p>到着地のレイオーバーおすすめスポット（グルメ等）を姉妹アプリ Atlas Layover で表示。</p>
+      <div class="go">開く ↗</div>
+    </button>
+  </div>`;
   bindCitySelect('efSel',ci=>{state.from=ci;paintEntry('ef',ci);});
   bindCitySelect('etSel',ci=>{state.to=ci;paintEntry('et',ci);});
   if(state.from)paintEntry('ef',state.from);

@@ -217,6 +217,39 @@
   .swap{width:34px;height:34px;margin-top:8px;border-radius:50%;border:1px solid var(--line);background:var(--paper-2);color:var(--slate);font-size:15px;cursor:pointer;display:grid;place-items:center;line-height:1;transition:transform .35s ease,background .2s}
   .swap:hover{background:var(--paper-3);transform:rotate(180deg)}
   .swap:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  /* pre-arrival checklist */
+  .ckdest{display:flex;align-items:baseline;gap:10px;padding-bottom:12px;border-bottom:1px solid var(--paper-2);margin-bottom:12px;flex-wrap:wrap}
+  .ckdest .ckdlab{font-family:var(--mono);font-size:9.5px;letter-spacing:.22em;color:var(--muted);font-weight:600}
+  .ckdest .ckdcode{font-family:var(--mono);font-weight:700;font-size:20px;color:var(--slate)}
+  .ckdest .ckdname{font-size:12.5px;color:var(--ink)}
+  .ckprog{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+  .ckbar{flex:1;height:8px;background:var(--paper-3);border-radius:99px;overflow:hidden}
+  .ckbar-fill{height:100%;width:0;background:var(--sage);border-radius:99px;transition:width .3s ease}
+  .ckpct{font-family:var(--mono);font-size:11px;color:var(--muted);min-width:66px;text-align:right}
+  .ckgroup{margin-bottom:16px}
+  .ckg{font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;color:var(--muted);font-weight:600;margin:0 0 4px}
+  .ck{position:relative;display:flex;align-items:stretch;border:1px solid var(--line);border-radius:9px;margin-top:7px;background:var(--paper-2);transition:background .15s}
+  .ck:hover{background:var(--paper-3)}
+  .ckhit{flex:1;min-width:0;display:flex;align-items:center;gap:11px;padding:10px 12px;cursor:pointer}
+  .ck input{position:absolute;opacity:0;width:0;height:0}
+  .ck .box{width:19px;height:19px;border:1.6px solid var(--line);border-radius:5px;flex:none;display:grid;place-items:center;transition:background .15s,border-color .15s}
+  .ck .box::after{content:"";width:9px;height:5px;border-left:2px solid var(--paper);border-bottom:2px solid var(--paper);transform:rotate(-45deg);margin-top:-2px;opacity:0}
+  .ck .lb{font-size:13px;color:var(--ink);line-height:1.45}
+  .ck.on .box{background:var(--sage);border-color:var(--sage)}
+  .ck.on .box::after{opacity:1}
+  .ck.on .lb{color:var(--muted);text-decoration:line-through}
+  .ck input:focus-visible + .box{outline:2px solid var(--gold);outline-offset:2px}
+  .ckdel{flex:none;border:0;background:none;color:var(--muted);font-size:18px;line-height:1;cursor:pointer;padding:0 12px;border-radius:0 8px 8px 0}
+  .ckdel:hover{color:var(--clay)}
+  .ckadd{display:flex;gap:8px;margin-top:9px}
+  .ckadd input{flex:1;min-width:0}
+  .cktgt{background:var(--paper-2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:14px}
+  .cktgt>label{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;color:var(--muted);font-weight:600;margin-bottom:7px}
+  .cktgt input{width:100%}
+  .ckcd{font-family:var(--mono);font-weight:700;font-size:34px;color:var(--ink);letter-spacing:.02em;margin-top:12px;line-height:1;text-align:center}
+  .ckcd.warn{color:var(--clay)}
+  .ckcd.over{color:var(--warn)}
+  .ckcdsub{font-size:11.5px;color:var(--muted);text-align:center;margin-top:7px;line-height:1.5}
   /* segmented toggle */
   .seg{display:inline-flex;background:var(--paper-2);border:1px solid var(--line);border-radius:9px;padding:3px;gap:3px;margin-bottom:14px}
   .seg button{font-family:var(--mono);font-size:12px;font-weight:600;border:0;background:none;color:var(--muted);padding:7px 18px;border-radius:6px;cursor:pointer;letter-spacing:.04em}
@@ -377,6 +410,7 @@ function tickClock(){
   const t=new Intl.DateTimeFormat('ja-JP',{hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(now);
   const nm=(CITIES.find(c=>c.z===HOME_TZ)||{}).n||HOME_TZ.split('/').pop().replace('_',' ');
   document.getElementById('clock').innerHTML=`<b>${t}</b><br>${nm} · ${fmtOffset(offsetHours(HOME_TZ,now))}`;
+  if(typeof updateCountdown==='function')updateCountdown();
 }
 setInterval(tickClock,1000);tickClock();
 
@@ -439,10 +473,17 @@ function renderEntry(){
       <p>レスト時間帯と交替数から各グループの休憩枠を算出。出発地／到着地／UTC で併記。</p>
       <div class="go">選択 →</div>
     </button>
+    <button class="mode-card" id="mC">
+      <div class="stub"><span>CHECKLIST</span></div>
+      <div class="kicker">MODE C</div>
+      <h2>到着前チェックリスト</h2>
+      <p>CIQ・seal/lock・引き継ぎ・アナウンス打ち合わせ・VIP対応など、着陸前のクルー業務を確認。進捗は端末に自動保存。</p>
+      <div class="go">選択 →</div>
+    </button>
   </div>
-  <button class="soon" id="mC">
+  <button class="soon" id="mD">
     <span class="badge">COMING SOON</span>
-    <div class="kicker">MODE C</div>
+    <div class="kicker">MODE D</div>
     <h2>Atlas 連携・グルメ</h2>
     <p>到着地のレイオーバーおすすめスポット（グルメ等）を姉妹アプリ Atlas から表示予定。</p>
   </button>`;
@@ -453,7 +494,8 @@ function renderEntry(){
   document.getElementById('swapEntry').onclick=()=>{swapRoute();renderEntry();};
   document.getElementById('mA').onclick=()=>renderModeA();
   document.getElementById('mB').onclick=()=>renderModeB();
-  document.getElementById('mC').onclick=()=>toast('Mode C（Atlas 連携）は近日公開予定です');
+  document.getElementById('mC').onclick=()=>renderModeC();
+  document.getElementById('mD').onclick=()=>toast('Mode D（Atlas 連携）は近日公開予定です');
 }
 function paintEntry(which,ci){
   const code=document.getElementById(which+'Code');const city=document.getElementById(which+'City');
@@ -466,7 +508,7 @@ function paintEntry(which,ci){
 function legPassHTML(p,kick,sub,fromCi,toCi,editable){
   const fSel=editable?`<div class="field" style="margin-top:8px">${citySelectHTML(p+'FSel',fromCi)}</div>`:'';
   const tSel=editable?`<div class="field" style="margin-top:8px">${citySelectHTML(p+'TSel',toCi)}</div>`:'';
-  const mid=`<div class="mid">${planeSVG()}<span class="dur" id="${p}Dur">—</span>${editable?swapBtnHTML('swapA'):''}</div>`;
+  const mid=`<div class="mid">${editable?swapBtnHTML('swapA'):''}</div>`;
   return `<div class="pass">
     <div class="pass-head"><span class="pk">${kick}</span><span class="pt">${sub}</span></div>
     <div class="pass-body">
@@ -677,6 +719,132 @@ function computeRest(){
   document.getElementById('shareLink').onclick=shareRestLink;
   document.getElementById('shareImg').onclick=shareRestImage;
 }
+/* ---------- Mode C: pre-arrival checklist ---------- */
+const CHECKLIST=[
+  {g:'CIQ・保安', items:[
+    'CIQ書類の配布・回収（入国 / 税関 / 検疫）',
+    '機内消毒（ディスインセクション）の実施',
+    'Seal / Lock 確認（免税品・保税カート）',
+    'ギャレー・コンパートメントの施錠',
+  ]},
+  {g:'ギャレー・引き継ぎ', items:[
+    'ミール／ドリンクの冷却・保管',
+    '次便・ケータリングへの引き継ぎ',
+    '搭載品・残数のカウント',
+  ]},
+  {g:'客室・乗客対応', items:[
+    '到着アナウンスの打ち合わせ',
+    '引き継ぎが必要なお客様へのお声かけ',
+    'お預かりジャケット・コートの返却',
+    'VIP・上級会員へのご挨拶／お見送り',
+  ]},
+];
+const CK_KEY='contrail_checklist_v2';
+const CKC_KEY='contrail_ck_custom_v2';
+const CKT_KEY='contrail_ck_target_v2';
+function loadChecks(){try{return JSON.parse(localStorage.getItem(CK_KEY))||{};}catch(e){return{};}}
+function saveChecks(o){try{localStorage.setItem(CK_KEY,JSON.stringify(o));}catch(e){}}
+function loadCustom(){try{return JSON.parse(localStorage.getItem(CKC_KEY))||[];}catch(e){return[];}}
+function saveCustom(a){try{localStorage.setItem(CKC_KEY,JSON.stringify(a));}catch(e){}}
+function ckId(gi,ii){return gi+'-'+ii;}
+function ckEsc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function checklistCounts(checks){
+  let total=0,done=0;
+  CHECKLIST.forEach((grp,gi)=>grp.items.forEach((_,ii)=>{total++;if(checks[ckId(gi,ii)])done++;}));
+  loadCustom().forEach(it=>{total++;if(checks[it.id])done++;});
+  return{total,done};
+}
+function ckRowHTML(id,label,on,removable){
+  return `<div class="ck ${on?'on':''}"><label class="ckhit"><input type="checkbox" data-ck="${id}"${on?' checked':''}><span class="box" aria-hidden="true"></span><span class="lb">${ckEsc(label)}</span></label>${removable?`<button class="ckdel" data-del="${id}" title="削除" aria-label="削除">×</button>`:''}</div>`;
+}
+function renderModeC(){
+  state.mode='C';
+  const checks=loadChecks();
+  const tval=loadTarget();
+  let body='';
+  CHECKLIST.forEach((grp,gi)=>{
+    let items='';
+    grp.items.forEach((label,ii)=>{items+=ckRowHTML(ckId(gi,ii),label,!!checks[ckId(gi,ii)],false);});
+    body+=`<div class="ckgroup"><div class="ckg">${grp.g}</div>${items}</div>`;
+  });
+  let custItems='';
+  loadCustom().forEach(it=>{custItems+=ckRowHTML(it.id,it.label,!!checks[it.id],true);});
+  body+=`<div class="ckgroup"><div class="ckg">自分で追加</div>${custItems}
+    <div class="ckadd"><input id="ckNew" type="text" placeholder="項目を入力して追加" maxlength="60"><button class="btn ghost" id="ckAdd">＋ 追加</button></div></div>`;
+  app.innerHTML=`
+  <button class="back" id="back">← ホーム</button>
+  <div class="pass">
+    <div class="pass-head"><span class="pk">MODE C</span><span class="pt">到着前チェックリスト / PRE-ARRIVAL</span></div>
+    <div class="pass-body">
+      <div class="ckdest"><span class="ckdlab">TO · 到着地</span><span class="ckdcode">${state.to?state.to.c:'—'}</span><span class="ckdname">${state.to?state.to.n:'ホームで到着地を選ぶと表示'}</span></div>
+      <div class="cktgt">
+        <label>目標 · 最終の着陸体制（${state.to?`${state.to.c} 現地`:'端末の時刻'}）</label>
+        <input type="datetime-local" id="ckTgt"${tval?` value="${tval}"`:''}>
+        <div class="ckcd" id="ckCd">—</div>
+        <div class="ckcdsub" id="ckCdSub"></div>
+      </div>
+      <div class="ckprog"><div class="ckbar"><div class="ckbar-fill" id="ckFill"></div></div><div class="ckpct" id="ckPct"></div></div>
+      ${body}
+      <div class="btnrow"><button class="btn ghost" id="ckReset">チェックをリセット</button></div>
+      <p class="hint">チェック状態と追加した項目はこの端末に自動保存されます。「リセット」はチェックのみ外します（追加した項目は残ります）。</p>
+    </div>
+  </div>`;
+  document.getElementById('back').onclick=renderEntry;
+  app.querySelectorAll('input[data-ck]').forEach(cb=>{
+    cb.addEventListener('change',()=>{
+      const o=loadChecks();o[cb.dataset.ck]=cb.checked;saveChecks(o);
+      cb.closest('.ck').classList.toggle('on',cb.checked);
+      updateCkProg();
+    });
+  });
+  app.querySelectorAll('.ckdel').forEach(b=>{b.onclick=()=>delCustom(b.dataset.del);});
+  document.getElementById('ckAdd').onclick=addCustom;
+  const nw=document.getElementById('ckNew');
+  nw.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addCustom();}});
+  document.getElementById('ckReset').onclick=()=>{saveChecks({});renderModeC();toast('チェックをリセットしました');};
+  const tg=document.getElementById('ckTgt');
+  tg.addEventListener('input',()=>{saveTarget(tg.value);updateCountdown();});
+  updateCkProg();updateCountdown();
+}
+function loadTarget(){try{return localStorage.getItem(CKT_KEY)||'';}catch(e){return'';}}
+function saveTarget(v){try{v?localStorage.setItem(CKT_KEY,v):localStorage.removeItem(CKT_KEY);}catch(e){}}
+function ckTargetInstant(){const p=parseLocal(loadTarget());if(!p)return null;const z=(state.to&&state.to.z)||HOME_TZ;return wallToInstant(z,p.y,p.mo,p.d,p.h,p.mi);}
+function updateCountdown(){
+  const cd=document.getElementById('ckCd');if(!cd)return;
+  const sub=document.getElementById('ckCdSub');
+  const zoneLabel=state.to?`${state.to.c} 現地`:'端末の時刻';
+  const zone=(state.to&&state.to.z)||HOME_TZ;
+  const inst=ckTargetInstant();
+  if(!inst){cd.textContent='—';cd.classList.remove('warn','over');if(sub)sub.textContent='目標時刻を設定するとカウントダウンを表示';return;}
+  const ms=inst-new Date();
+  if(ms<=0){cd.textContent='00:00:00';cd.classList.remove('warn');cd.classList.add('over');if(sub)sub.textContent=`着陸体制の予定時刻を過ぎています · ${zoneLabel}`;return;}
+  cd.classList.remove('over');
+  const tot=Math.floor(ms/1000);const h=Math.floor(tot/3600);const m=Math.floor(tot%3600/60);const s=tot%60;
+  cd.textContent=`${h}:${pad(m)}:${pad(s)}`;
+  cd.classList.toggle('warn',ms<=15*60000);
+  if(sub)sub.textContent=`最終の着陸体制まで · 目標 ${dateTimeInZone(zone,inst)}（${zoneLabel}）`;
+}
+function addCustom(){
+  const inp=document.getElementById('ckNew');const v=(inp.value||'').trim();
+  if(!v)return;
+  const list=loadCustom();
+  list.push({id:'u'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),label:v});
+  saveCustom(list);
+  renderModeC();
+  const n=document.getElementById('ckNew');if(n)n.focus();
+}
+function delCustom(id){
+  saveCustom(loadCustom().filter(it=>it.id!==id));
+  const ch=loadChecks();delete ch[id];saveChecks(ch);
+  renderModeC();
+}
+function updateCkProg(){
+  const {total,done}=checklistCounts(loadChecks());
+  const pct=total?Math.round(done/total*100):0;
+  const fill=document.getElementById('ckFill');if(fill)fill.style.width=pct+'%';
+  const p=document.getElementById('ckPct');if(p)p.textContent=`${done} / ${total} 完了`;
+}
+
 /* ---- Mode B share ---- */
 function restParams(){
   const p=new URLSearchParams();p.set('m','B');

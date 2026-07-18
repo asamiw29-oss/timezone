@@ -478,10 +478,10 @@ function renderEntry(){
     </button>
   </div>
   <button class="soon" id="mD">
-    <span class="badge">COMING SOON</span>
+    <span class="badge">OPEN ↗</span>
     <div class="kicker">MODE D</div>
     <h2>Atlas 連携・グルメ</h2>
-    <p>到着地のレイオーバーおすすめスポット（グルメ等）を姉妹アプリ Atlas から表示予定。</p>
+    <p>到着地のレイオーバーおすすめスポット（グルメ等）を姉妹アプリ Atlas Layover で表示。</p>
   </button>`;
   bindCitySelect('efSel',ci=>{state.from=ci;paintEntry('ef',ci);});
   bindCitySelect('etSel',ci=>{state.to=ci;paintEntry('et',ci);});
@@ -491,7 +491,7 @@ function renderEntry(){
   document.getElementById('mA').onclick=()=>renderModeA();
   document.getElementById('mB').onclick=()=>renderModeB();
   document.getElementById('mC').onclick=()=>renderModeC();
-  document.getElementById('mD').onclick=()=>toast('Mode D（Atlas 連携）は近日公開予定です');
+  document.getElementById('mD').onclick=()=>window.open('https://atlaslayover.vercel.app/','_blank','noopener');
 }
 function paintEntry(which,ci){
   const code=document.getElementById(which+'Code');const city=document.getElementById(which+'City');
